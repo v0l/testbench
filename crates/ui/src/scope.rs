@@ -365,7 +365,7 @@ impl ScopePanel {
         let max_points = (area.width() as usize).max(2);
         for (c, w) in self.waves.iter().enumerate() {
             let Some(w) = w else { continue };
-            let pts: Vec<Pos2> = trace_points(w, VDIV_STEPS[self.vdiv[c.min(3)]], self.offset[c.min(3)], max_points)
+            let pts: Vec<Pos2> = trace_points(w, w.vdiv, self.offset[c.min(3)], max_points)
                 .into_iter()
                 .map(at)
                 .collect();
@@ -373,7 +373,7 @@ impl ScopePanel {
                 p.add(egui::Shape::line(pts, Stroke::new(1.5, CHANNEL_TINTS[c.min(3)])));
             }
         }
-        let tdiv = TDIV_STEPS[self.tdiv];
+        let tdiv = self.waves.iter().flatten().next().map_or(TDIV_STEPS[self.tdiv], |w| w.tdiv);
         p.text(
             Pos2::new(rect.left() + 8.0, rect.bottom() - 4.0),
             egui::Align2::LEFT_BOTTOM,
@@ -386,7 +386,11 @@ impl ScopePanel {
                 p.text(
                     Pos2::new(rect.left() + 8.0 + 90.0 * (c as f32 + 1.0), rect.bottom() - 4.0),
                     egui::Align2::LEFT_BOTTOM,
-                    format!("ch{} {}/div", c + 1, si(VDIV_STEPS[self.vdiv[c]], "V")),
+                    format!(
+                        "ch{} {}/div",
+                        c + 1,
+                        si(self.waves.get(c).and_then(|w| w.as_ref()).map_or(VDIV_STEPS[self.vdiv[c]], |w| w.vdiv), "V")
+                    ),
                     mono(10.0),
                     CHANNEL_TINTS[c],
                 );

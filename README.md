@@ -60,7 +60,7 @@ Developed without any instrument attached. Verified against the demo devices and
 - Supply and load control through cycler-core (OWON SPE, OWON OEL, Atorch DL24), including arm and the left-on safety.
 - NanoVNA detection, sweeps and SOL calibration on real hardware.
 - USBTMC transport, Rigol, Siglent and Keysight/Owon scope drivers.
-- Hantek DSO5102P (proprietary USB protocol, VID 049f PID 505a): capture, run, stop and screenshot verified on real hardware. Setting the timebase, volts per division and trigger over USB is not supported. The scope drops about half of its replies, so capture retries.
+- Hantek DSO5102P (proprietary USB protocol, VID 049f PID 505a): capture, run, stop, screenshot and the scope tab (`testbench-ui --tab scope --connect-scope`) verified on real hardware. Setting the timebase, volts per division and trigger over USB is not supported. The scope drops about half of its replies, so capture retries.
 - Windows and macOS builds and the release packages.
 
 The scope screen, plots and Smith chart were checked in a headless compositor with demo data.

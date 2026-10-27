@@ -202,6 +202,7 @@ impl eframe::App for App {
 fn main() -> eframe::Result<()> {
     let args: Vec<String> = std::env::args().collect();
     let demo = args.iter().any(|a| a == "--demo");
+    let connect_scope = args.iter().any(|a| a == "--connect-scope");
     let tab = args
         .iter()
         .position(|a| a == "--tab")
@@ -233,6 +234,8 @@ fn main() -> eframe::Result<()> {
             let mut app = App::new(demo, tab);
             if demo {
                 app.autoconnect();
+            } else if connect_scope {
+                app.scope.connect();
             }
             Ok(Box::new(app))
         }),

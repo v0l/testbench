@@ -26,6 +26,7 @@ assets = [
     ["target/release/testbench-ui", "usr/bin/", "755"],
     ["../../packaging/linux/testbench.desktop", "usr/share/applications/", "644"],
     ["../ui/assets/icon-256.png", "usr/share/icons/hicolor/256x256/apps/testbench.png", "644"],
+    ["../../packaging/linux/60-testbench-hantek.rules", "usr/lib/udev/rules.d/", "644"],
     ["../../README.md", "usr/share/doc/testbench/README.md", "644"],
 ]
 
