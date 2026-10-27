@@ -4384,7 +4384,6 @@ dependencies = [
  "anyhow",
  "chrono",
  "cycler-core",
- "signal-hook",
 ]
 
 [[package]]
