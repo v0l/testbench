@@ -5,7 +5,7 @@ use anyhow::{Result, bail, ensure};
 use std::time::Duration;
 
 pub const COUNTS_PER_DIV: f64 = 25.0;
-pub const SAMPLES_PER_DIV: f64 = 250.0;
+pub const SAMPLES_PER_DIV: f64 = 200.0;
 pub const SETTINGS_LEN: usize = 208;
 pub const SCREEN_W: usize = 800;
 pub const SCREEN_H: usize = 480;
@@ -20,7 +20,7 @@ const RETRIES: usize = 40;
 const SETTLE: Duration = Duration::from_millis(100);
 const RETRY_WAIT: Duration = Duration::from_millis(25);
 
-pub const VDIV: [f64; 10] = [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1.0, 2.0, 5.0, 10.0];
+pub const VDIV: [f64; 11] = [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1.0, 2.0, 5.0, 10.0, 20.0];
 
 pub const TDIV: [f64; 32] = [
     2e-9, 4e-9, 8e-9, 2e-8, 4e-8, 8e-8, 2e-7, 4e-7, 8e-7, 2e-6, 4e-6, 8e-6, 2e-5, 4e-5, 8e-5,
@@ -352,6 +352,13 @@ mod tests {
     }
 
     #[test]
+    fn twenty_volts_per_division_is_index_ten() {
+        let s = parse_settings(&settings_blob(10, 0, 16, 1)).unwrap();
+        assert_eq!(s.channels[0].vdiv, 20.0);
+        assert_eq!(s.tdiv, 4e-4);
+    }
+
+    #[test]
     fn unknown_scale_index_is_an_error() {
         assert!(parse_settings(&settings_blob(99, 0, 20, 1)).is_err());
         assert!(parse_settings(&settings_blob(7, 0, 99, 1)).is_err());
@@ -388,7 +395,7 @@ mod tests {
         let w = s.capture(0).unwrap();
         assert_eq!(w.len(), 2);
         assert_eq!(w.tdiv, 8e-3);
-        assert!((w.dt - 8e-3 / 250.0).abs() < 1e-12);
+        assert!((w.dt - 8e-3 / 200.0).abs() < 1e-12);
         assert_eq!(w.vdiv, 2.0);
     }
 
