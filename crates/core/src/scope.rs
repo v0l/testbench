@@ -9,7 +9,7 @@ use testbench_scope::{
 #[derive(Clone, Debug)]
 pub enum ScopeTarget {
     Demo,
-    Usb(UsbtmcInfo),
+    Usb(Box<UsbtmcInfo>),
 }
 
 impl ScopeTarget {
@@ -28,14 +28,14 @@ pub fn scope_targets(demo: bool) -> Vec<ScopeTarget> {
     list_usbtmc()
         .unwrap_or_default()
         .into_iter()
-        .map(ScopeTarget::Usb)
+        .map(|i| ScopeTarget::Usb(Box::new(i)))
         .collect()
 }
 
 pub fn open_scope(target: &ScopeTarget) -> Result<Box<dyn Scope>> {
     match target {
         ScopeTarget::Demo => Ok(Box::new(DemoScope::new())),
-        ScopeTarget::Usb(info) => connect_usb(info),
+        ScopeTarget::Usb(info) => connect_usb(info.as_ref()),
     }
 }
 

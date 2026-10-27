@@ -9,3 +9,4 @@ All notable changes to Testbench are listed here. The format follows
 ### Added
 - Supply, load, VNA and log tabs, with a `--demo` mode of simulated devices.
 - `testbench` command line tool: `devices`, `psu`, `load` and `vna sweep`.
+- A scope tab and `testbench scope devices|idn|capture`.

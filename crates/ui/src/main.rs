@@ -2,6 +2,7 @@ mod devices;
 mod logtab;
 mod load;
 mod plot;
+mod scope;
 mod smith;
 mod supply;
 mod vna;
@@ -15,6 +16,7 @@ use std::sync::Mutex;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::Sender;
 use std::time::{Duration, Instant};
+use scope::ScopePanel;
 use supply::SupplyPanel;
 use testbench_core::worker::{LoadCommand, SupplyCommand};
 use vna::VnaPanel;
@@ -24,6 +26,7 @@ enum Tab {
     Supply,
     Load,
     Vna,
+    Scope,
     Log,
 }
 
@@ -33,6 +36,7 @@ struct App {
     supply: SupplyPanel,
     load: LoadPanel,
     vna: VnaPanel,
+    scope: ScopePanel,
     log: LogPanel,
 }
 
@@ -87,6 +91,7 @@ impl App {
             supply: SupplyPanel::new(demo),
             load: LoadPanel::new(demo),
             vna: VnaPanel::new(demo),
+            scope: ScopePanel::new(demo),
             log: LogPanel::new(),
         }
     }
@@ -96,6 +101,7 @@ impl App {
         self.load.connect();
         self.vna.connect();
         self.vna.sweep_once();
+        self.scope.connect();
     }
 
     fn now(&self) -> f64 {
@@ -107,6 +113,7 @@ impl App {
         self.supply.drain(t);
         self.load.drain(t);
         self.vna.drain();
+        self.scope.drain();
         publish(&self.supply, &self.load);
         self.log.sample(t, self.supply.reading(), self.load.reading());
     }
@@ -116,6 +123,7 @@ impl App {
         self.supply.disconnect();
         self.load.disconnect();
         self.vna.disconnect();
+        self.scope.disconnect();
         publish(&self.supply, &self.load);
     }
 }
@@ -133,7 +141,8 @@ impl eframe::App for App {
 
     fn ui(&mut self, root: &mut egui::Ui, _frame: &mut eframe::Frame) {
         self.drain();
-        let busy = self.supply.connected() || self.load.connected() || self.vna.connected();
+        let busy = self.supply.connected() || self.load.connected() || self.vna.connected()
+            || self.scope.connected();
         root.ctx().request_repaint_after(Duration::from_millis(if busy { 100 } else { 500 }));
 
         egui::Panel::top("header")
@@ -159,6 +168,7 @@ impl eframe::App for App {
                             (Tab::Supply, "supply"),
                             (Tab::Load, "load"),
                             (Tab::Vna, "vna"),
+                            (Tab::Scope, "scope"),
                             (Tab::Log, "log"),
                         ],
                     );
@@ -180,6 +190,7 @@ impl eframe::App for App {
             Tab::Supply => self.supply.ui(root),
             Tab::Load => self.load.ui(root),
             Tab::Vna => self.vna.ui(root),
+            Tab::Scope => self.scope.ui(root),
             Tab::Log => {
                 let hist = [&self.supply.v_hist, &self.supply.a_hist, &self.load.v_hist, &self.load.a_hist];
                 self.log.ui(root, hist);
@@ -198,6 +209,7 @@ fn main() -> eframe::Result<()> {
         .map(|t| match t.as_str() {
             "load" => Tab::Load,
             "vna" => Tab::Vna,
+            "scope" => Tab::Scope,
             "log" => Tab::Log,
             _ => Tab::Supply,
         })

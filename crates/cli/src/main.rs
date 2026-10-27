@@ -7,6 +7,7 @@ use testbench_core::export::{Z0, sweep_csv, touchstone_s1p};
 use testbench_core::limits::{clamp_load, clamp_setpoint};
 use testbench_core::open::{DEMO_SPEC, VnaTarget, find_vna, open_load, open_supply, open_vna};
 use testbench_core::parse::{parse_freq, parse_mode};
+use testbench_core::scope::{open_scope, scope_targets};
 use testbench_core::sweep::SweepParams;
 
 #[derive(Parser)]
@@ -33,6 +34,72 @@ enum Cmd {
         #[command(subcommand)]
         action: VnaCmd,
     },
+    Scope {
+        #[command(subcommand)]
+        action: ScopeCmd,
+    },
+}
+
+#[derive(Subcommand)]
+enum ScopeCmd {
+    Devices,
+    Idn {
+        #[arg(long, default_value_t = 0)]
+        index: usize,
+    },
+    Capture {
+        channel: usize,
+        #[arg(long)]
+        csv: Option<PathBuf>,
+        #[arg(long, default_value_t = 0)]
+        index: usize,
+    },
+}
+
+fn scope_open(demo: bool, index: usize) -> Result<Box<dyn testbench_core::testbench_scope::Scope>> {
+    let targets = scope_targets(demo);
+    let t = targets.get(index).context("no USBTMC scope found")?;
+    open_scope(t)
+}
+
+fn scope_cmd(demo: bool, action: ScopeCmd) -> Result<()> {
+    match action {
+        ScopeCmd::Devices => {
+            for t in scope_targets(demo) {
+                println!("scope   {}", t.label());
+            }
+            Ok(())
+        }
+        ScopeCmd::Idn { index } => {
+            let dev = scope_open(demo, index)?;
+            let d = dev.describe();
+            println!("{},{},{},{} ({} channels)", d.manufacturer, d.model, d.serial, d.firmware, d.channels);
+            Ok(())
+        }
+        ScopeCmd::Capture { channel, csv, index } => {
+            let mut dev = scope_open(demo, index)?;
+            if channel == 0 || channel > dev.channels() {
+                bail!("channel must be 1 to {}", dev.channels());
+            }
+            let w = dev.capture(channel - 1)?;
+            match testbench_core::testbench_scope::measure(&w) {
+                Some(m) => println!(
+                    "ch{channel}: {} samples, {:.3} Vpp, {:.3} Vrms, {}",
+                    w.len(),
+                    m.vpp,
+                    m.vrms,
+                    m.frequency.map(|f| format!("{f:.1} Hz")).unwrap_or_else(|| "no frequency".into())
+                ),
+                None => println!("ch{channel}: {} samples", w.len()),
+            }
+            if let Some(path) = csv {
+                let name = format!("ch{channel}");
+                std::fs::write(&path, testbench_core::testbench_scope::export::csv(&[(name.as_str(), &w)]))?;
+                println!("wrote {}", path.display());
+            }
+            Ok(())
+        }
+    }
 }
 
 #[derive(Subcommand)]
@@ -109,6 +176,7 @@ fn devices(demo: bool) -> Result<()> {
         println!("supply  demo");
         println!("load    demo");
         println!("vna     demo");
+        println!("scope   demo");
         return Ok(());
     }
     for (role, backends) in [("supply", CHARGER_BACKENDS), ("load", LOAD_BACKENDS)] {
@@ -120,6 +188,9 @@ fn devices(demo: bool) -> Result<()> {
     }
     for p in testbench_core::antenna_vna::detect() {
         println!("vna     {}  {}", p.path, p.product);
+    }
+    for t in scope_targets(false) {
+        println!("scope   {}", t.label());
     }
     Ok(())
 }
@@ -236,6 +307,7 @@ fn main() -> Result<()> {
             load_set(&spec(cli.demo, &backend, &port), &mode, value, on, hold)
         }
         Cmd::Load { action: LoadCmd::Off { backend, port } } => load_off(&spec(cli.demo, &backend, &port)),
+        Cmd::Scope { action } => scope_cmd(cli.demo, action),
         Cmd::Vna { action: VnaCmd::Sweep { start, stop, points, csv, s1p, port } } => {
             vna_sweep(cli.demo, &start, &stop, points, csv, s1p, port)
         }
