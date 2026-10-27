@@ -4395,6 +4395,7 @@ dependencies = [
  "eframe",
  "egui",
  "egui_bench",
+ "signal-hook",
  "testbench-core",
  "winresource",
 ]
