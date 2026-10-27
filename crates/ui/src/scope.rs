@@ -32,6 +32,7 @@ pub struct ScopePanel {
     pub path: String,
     pub message: Option<(bool, String)>,
     closing: Vec<std::thread::JoinHandle<()>>,
+    pub connect_when_closed: bool,
 }
 
 fn default_path() -> String {
@@ -62,6 +63,7 @@ impl ScopePanel {
             path: default_path(),
             message: None,
             closing: Vec::new(),
+            connect_when_closed: false,
         }
     }
 
@@ -77,13 +79,17 @@ impl ScopePanel {
         self.disconnect();
         self.closing.retain(|h| !h.is_finished());
         if !self.closing.is_empty() {
-            self.message = Some((false, "previous session is still closing, try again".into()));
+            self.connect_when_closed = true;
+            self.message = Some((true, "waiting for the previous session to close".into()));
             return;
         }
+        self.connect_when_closed = false;
+        self.message = None;
         self.session = Some(spawn_scope(t));
     }
 
     pub fn disconnect(&mut self) {
+        self.connect_when_closed = false;
         if let Some(s) = self.session.take() {
             self.closing.push(close_scope(s));
         }
@@ -110,6 +116,12 @@ impl ScopePanel {
     }
 
     pub fn drain(&mut self) {
+        if self.connect_when_closed {
+            self.closing.retain(|h| !h.is_finished());
+            if self.closing.is_empty() {
+                self.connect();
+            }
+        }
         let Some(s) = &self.session else { return };
         let mut updates = Vec::new();
         while let Ok(u) = s.rx.try_recv() {
@@ -475,5 +487,32 @@ impl ScopePanel {
             }
         });
         self.measure_channel = picked;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::time::{Duration, Instant};
+
+    #[test]
+    fn connect_right_after_disconnect_connects_once_the_old_session_closes() {
+        let mut p = ScopePanel::new(true);
+        p.connect();
+        let deadline = Instant::now() + Duration::from_secs(5);
+        while !p.connected() && Instant::now() < deadline {
+            p.drain();
+            std::thread::sleep(Duration::from_millis(10));
+        }
+        assert!(p.connected());
+        p.disconnect();
+        p.connect();
+        while !p.connected() && Instant::now() < deadline {
+            p.drain();
+            std::thread::sleep(Duration::from_millis(10));
+        }
+        assert!(p.connected());
+        assert!(!p.connect_when_closed);
+        p.disconnect();
     }
 }
