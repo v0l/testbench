@@ -372,7 +372,7 @@ mod tests {
         let s = spawn_load(DEMO_ON_SPEC.into());
         let first = wait_for(&s.rx, |u| u.connected);
         assert_eq!(first.notes, vec![leftover_note("load")]);
-        assert_eq!(first.state.unwrap().on, false);
+        assert!(!first.state.unwrap().on);
         close_load(s);
     }
 
