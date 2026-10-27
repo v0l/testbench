@@ -1,0 +1,13 @@
+[package]
+name = "testbench-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+cycler-core.workspace = true
+antenna-vna.workspace = true
+anyhow.workspace = true
+chrono.workspace = true
+signal-hook.workspace = true

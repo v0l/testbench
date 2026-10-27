@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-labelledby="t d">
+  <title id="t">Testbench</title>
+  <desc id="d">A supply trace in amber and a swept return loss dip in cyan on one time axis.</desc>
+  <rect width="64" height="64" rx="14" fill="#0B1014"/>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="3">
+    <path d="M10 18H30V30H54" stroke="#F5A524"/>
+    <path d="M10 50C18 50 20 50 24 44C28 36 30 32 34 44C38 50 44 50 54 50" stroke="#2FD3E1"/>
+  </g>
+</svg>

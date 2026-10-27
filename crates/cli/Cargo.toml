@@ -1,0 +1,35 @@
+[package]
+name = "testbench-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description.workspace = true
+
+[[bin]]
+name = "testbench"
+path = "src/main.rs"
+
+[package.metadata.deb]
+name = "testbench"
+maintainer = "v0l <kieran@harkin.me>"
+copyright = "v0l"
+license-file = ["../../LICENSE", "0"]
+section = "electronics"
+priority = "optional"
+extended-description = """\
+Testbench drives a bench supply, an electronic load and a NanoVNA from one \
+window. Ships the testbench command line tool and the testbench-ui desktop \
+application."""
+assets = [
+    ["target/release/testbench", "usr/bin/", "755"],
+    ["target/release/testbench-ui", "usr/bin/", "755"],
+    ["../../packaging/linux/testbench.desktop", "usr/share/applications/", "644"],
+    ["../ui/assets/icon-256.png", "usr/share/icons/hicolor/256x256/apps/testbench.png", "644"],
+    ["../../README.md", "usr/share/doc/testbench/README.md", "644"],
+]
+
+[dependencies]
+testbench-core.workspace = true
+anyhow.workspace = true
+clap.workspace = true
