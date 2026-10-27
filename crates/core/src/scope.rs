@@ -62,15 +62,22 @@ pub enum ScopeUpdate {
 pub type ScopeSession = Session<ScopeCommand, ScopeUpdate>;
 
 pub fn spawn_scope(target: ScopeTarget) -> ScopeSession {
+    spawn_scope_with(move || open_scope(&target))
+}
+
+pub fn spawn_scope_with<F>(open: F) -> ScopeSession
+where
+    F: FnOnce() -> Result<Box<dyn Scope>> + Send + 'static,
+{
     let (tx, cmd_rx) = channel::<ScopeCommand>();
     let (up_tx, rx) = channel::<ScopeUpdate>();
-    let handle = std::thread::spawn(move || scope_loop(target, cmd_rx, up_tx));
+    let handle = std::thread::spawn(move || scope_loop(open, cmd_rx, up_tx));
     Session::from_parts(tx, rx, handle)
 }
 
-pub fn close_scope(mut s: ScopeSession) {
+pub fn close_scope(mut s: ScopeSession) -> std::thread::JoinHandle<()> {
     let _ = s.tx.send(ScopeCommand::Quit);
-    s.join();
+    std::thread::spawn(move || s.join())
 }
 
 fn capture_all(dev: &mut dyn Scope, enabled: &[bool]) -> Result<Vec<Option<Waveform>>> {
@@ -122,8 +129,11 @@ pub fn apply(dev: &mut dyn Scope, cmd: &ScopeCommand, running: &mut bool, enable
     Ok(fresh)
 }
 
-fn scope_loop(target: ScopeTarget, cmds: Receiver<ScopeCommand>, out: Sender<ScopeUpdate>) {
-    let mut dev = match open_scope(&target) {
+fn scope_loop<F>(open: F, cmds: Receiver<ScopeCommand>, out: Sender<ScopeUpdate>)
+where
+    F: FnOnce() -> Result<Box<dyn Scope>>,
+{
+    let mut dev = match open() {
         Ok(d) => d,
         Err(e) => {
             let _ = out.send(ScopeUpdate::Failed(format!("{e:#}")));
@@ -183,6 +193,53 @@ mod tests {
         }
     }
 
+    struct Stuck;
+
+    impl Scope for Stuck {
+        fn describe(&self) -> &testbench_scope::Description {
+            static D: std::sync::OnceLock<testbench_scope::Description> = std::sync::OnceLock::new();
+            D.get_or_init(|| testbench_scope::Description {
+                manufacturer: "stuck".into(),
+                model: "S".into(),
+                serial: String::new(),
+                firmware: String::new(),
+                channels: 1,
+            })
+        }
+        fn set_timebase(&mut self, _: f64) -> Result<()> {
+            Ok(())
+        }
+        fn set_vertical(&mut self, _: usize, _: f64, _: f64) -> Result<()> {
+            Ok(())
+        }
+        fn set_trigger(&mut self, _: Trigger) -> Result<()> {
+            Ok(())
+        }
+        fn run(&mut self) -> Result<()> {
+            Ok(())
+        }
+        fn stop(&mut self) -> Result<()> {
+            Ok(())
+        }
+        fn single(&mut self) -> Result<()> {
+            Ok(())
+        }
+        fn capture(&mut self, _: usize) -> Result<Waveform> {
+            std::thread::sleep(Duration::from_secs(2));
+            anyhow::bail!("stuck")
+        }
+    }
+
+    #[test]
+    fn closing_a_scope_stuck_in_a_capture_does_not_block_the_caller() {
+        let s = spawn_scope_with(|| Ok(Box::new(Stuck)));
+        std::thread::sleep(Duration::from_millis(300));
+        let t = Instant::now();
+        let closing = close_scope(s);
+        assert!(t.elapsed() < Duration::from_millis(200));
+        closing.join().unwrap();
+    }
+
     #[test]
     fn demo_scope_streams_only_enabled_channels() {
         let s = spawn_scope(ScopeTarget::Demo);
@@ -192,7 +249,7 @@ mod tests {
             got = next_frame(&s.rx);
         }
         assert!(got.0[0].is_some() && got.0[1].is_none() && got.0[2].is_some());
-        close_scope(s);
+        close_scope(s).join().unwrap();
     }
 
     #[test]
@@ -209,7 +266,7 @@ mod tests {
         assert!(s.rx.recv_timeout(Duration::from_millis(400)).is_err());
         s.tx.send(ScopeCommand::Run).unwrap();
         assert!(next_frame(&s.rx).1);
-        close_scope(s);
+        close_scope(s).join().unwrap();
     }
 
     #[test]
@@ -222,6 +279,6 @@ mod tests {
                 break;
             }
         }
-        close_scope(s);
+        close_scope(s).join().unwrap();
     }
 }

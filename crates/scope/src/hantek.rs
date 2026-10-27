@@ -16,7 +16,7 @@ const CMD_SAMPLES: u8 = 0x02;
 const CMD_ACQUISITION: u8 = 0x12;
 const CMD_SCREENSHOT: u8 = 0x20;
 const REPLY: u8 = 0x80;
-const RETRIES: usize = 40;
+const RETRIES: usize = 16;
 const SETTLE: Duration = Duration::from_millis(100);
 const RETRY_WAIT: Duration = Duration::from_millis(25);
 

@@ -31,6 +31,7 @@ pub struct ScopePanel {
     pub measure_channel: usize,
     pub path: String,
     pub message: Option<(bool, String)>,
+    closing: Vec<std::thread::JoinHandle<()>>,
 }
 
 fn default_path() -> String {
@@ -60,6 +61,7 @@ impl ScopePanel {
             measure_channel: 0,
             path: default_path(),
             message: None,
+            closing: Vec::new(),
         }
     }
 
@@ -73,12 +75,17 @@ impl ScopePanel {
             return;
         };
         self.disconnect();
+        self.closing.retain(|h| !h.is_finished());
+        if !self.closing.is_empty() {
+            self.message = Some((false, "previous session is still closing, try again".into()));
+            return;
+        }
         self.session = Some(spawn_scope(t));
     }
 
     pub fn disconnect(&mut self) {
         if let Some(s) = self.session.take() {
-            close_scope(s);
+            self.closing.push(close_scope(s));
         }
         self.name = None;
     }
@@ -128,7 +135,7 @@ impl ScopePanel {
             }
         }
         if failed_closed && let Some(s) = self.session.take() {
-            close_scope(s);
+            self.closing.push(close_scope(s));
         }
     }
 
