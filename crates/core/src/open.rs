@@ -1,4 +1,4 @@
-use crate::demo::{DemoLoad, DemoSupply, DemoVna};
+use crate::demo::{DemoLoad, DemoSupply, DemoVna, StandardSwitch};
 use anyhow::{Context, Result};
 use antenna_vna::{Port, Vna};
 use cycler_core::{Charger, Discharger, open_charger, open_discharger};
@@ -25,9 +25,20 @@ pub fn open_load(spec: &str) -> Result<Box<dyn Discharger>> {
 }
 
 pub fn open_vna(target: &VnaTarget) -> Result<Box<dyn Vna>> {
+    Ok(open_vna_switched(target)?.0)
+}
+
+pub fn open_vna_switched(target: &VnaTarget) -> Result<(Box<dyn Vna>, Option<StandardSwitch>)> {
     match target {
-        VnaTarget::Demo => Ok(Box::new(DemoVna::new())),
-        VnaTarget::Port(p) => antenna_vna::open(p).map_err(|e| anyhow::anyhow!("{e}")),
+        VnaTarget::Demo => {
+            let dev = DemoVna::new();
+            let switch = dev.switch();
+            Ok((Box::new(dev), Some(switch)))
+        }
+        VnaTarget::Port(p) => Ok((
+            antenna_vna::open(p).map_err(|e| anyhow::anyhow!("{e}"))?,
+            None,
+        )),
     }
 }
 

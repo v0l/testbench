@@ -278,9 +278,11 @@ pub fn through_error_box(gamma: C64) -> C64 {
     e00 + track * gamma / (C64::new(1.0, 0.0) - e11 * gamma)
 }
 
+pub type StandardSwitch = std::sync::Arc<std::sync::Mutex<Option<DemoStandard>>>;
+
 #[derive(Default)]
 pub struct DemoVna {
-    standard: Option<DemoStandard>,
+    switch: StandardSwitch,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -295,12 +297,17 @@ impl DemoVna {
         Self::default()
     }
 
+    pub fn switch(&self) -> StandardSwitch {
+        self.switch.clone()
+    }
+
     pub fn connect_standard(&mut self, standard: Option<DemoStandard>) {
-        self.standard = standard;
+        *self.switch.lock().unwrap() = standard;
     }
 
     fn truth(&self, freq: f64) -> C64 {
-        match self.standard {
+        let standard = *self.switch.lock().unwrap();
+        match standard {
             None => antenna_gamma(freq),
             Some(DemoStandard::Open) => C64::new(1.0, 0.0),
             Some(DemoStandard::Short) => C64::new(-1.0, 0.0),

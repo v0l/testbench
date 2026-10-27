@@ -1,4 +1,5 @@
-use crate::open::{VnaTarget, open_load, open_supply, open_vna};
+use crate::demo::DemoStandard;
+use crate::open::{VnaTarget, open_load, open_supply, open_vna_switched};
 use crate::sweep::SweepParams;
 use antenna_vna::{Calibration, Point, Standard};
 use cycler_core::device::{Limits, LoadMode, LoadState, Regulation};
@@ -265,12 +266,20 @@ pub fn spawn_vna(target: VnaTarget) -> VnaSession {
     Session::new(tx, rx, handle)
 }
 
+fn demo_standard(s: Standard) -> DemoStandard {
+    match s {
+        Standard::Open => DemoStandard::Open,
+        Standard::Short => DemoStandard::Short,
+        Standard::Load => DemoStandard::Load,
+    }
+}
+
 pub fn cal_flags(cal: &Calibration) -> [bool; 3] {
     [cal.has(Standard::Open), cal.has(Standard::Short), cal.has(Standard::Load)]
 }
 
 fn vna_loop(target: VnaTarget, cmds: Receiver<VnaCommand>, out: Sender<VnaUpdate>) {
-    let mut dev = match open_vna(&target) {
+    let (mut dev, switch) = match open_vna_switched(&target) {
         Ok(d) => d,
         Err(e) => {
             let _ = out.send(VnaUpdate::Failed(format!("{e:#}")));
@@ -321,7 +330,14 @@ fn vna_loop(target: VnaTarget, cmds: Receiver<VnaCommand>, out: Sender<VnaUpdate
         if !(do_sweep || capture.is_some()) {
             continue;
         }
-        match dev.sweep(p.start_hz, p.stop_hz, p.points, false) {
+        if let (Some(sw), Some(std)) = (&switch, capture) {
+            *sw.lock().unwrap() = Some(demo_standard(std));
+        }
+        let swept = dev.sweep(p.start_hz, p.stop_hz, p.points, false);
+        if let Some(sw) = &switch {
+            *sw.lock().unwrap() = None;
+        }
+        match swept {
             Ok(points) => {
                 if let Some(std) = capture {
                     cal.store(std, &points);
@@ -416,8 +432,10 @@ mod tests {
         }
         s.tx.send(VnaCommand::Sweep(p)).unwrap();
         let again = wait_for(&s.rx, |u| matches!(u, VnaUpdate::Sweep { .. }));
-        let VnaUpdate::Sweep { corrected, .. } = again else { unreachable!() };
+        let VnaUpdate::Sweep { corrected, points, .. } = again else { unreachable!() };
         assert!(corrected);
+        let mid = &points[10];
+        assert!((mid.s11 - crate::demo::antenna_gamma(mid.freq)).norm() < 1e-9);
         close_vna(s);
     }
 }
