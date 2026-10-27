@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/core", "crates/cli", "crates/ui"]
+members = ["crates/scope", "crates/core", "crates/cli", "crates/ui"]
 resolver = "3"
 
 [workspace.package]
@@ -10,7 +10,9 @@ repository = "https://github.com/v0l/testbench"
 description = "Test and measure bench: a PSU, an electronic load and a NanoVNA from one window"
 
 [workspace.dependencies]
+nusb = "0.2"
 testbench-core = { path = "crates/core" }
+testbench-scope = { path = "crates/scope" }
 cycler-core = { git = "https://github.com/v0l/cycler" }
 antenna-vna = { git = "https://github.com/v0l/antenna-toolbox" }
 anyhow = "1.0"

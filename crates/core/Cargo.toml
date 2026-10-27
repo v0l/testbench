@@ -8,5 +8,6 @@ repository.workspace = true
 [dependencies]
 cycler-core.workspace = true
 antenna-vna.workspace = true
+testbench-scope.workspace = true
 anyhow.workspace = true
 chrono.workspace = true

@@ -4384,6 +4384,15 @@ dependencies = [
  "anyhow",
  "chrono",
  "cycler-core",
+ "testbench-scope",
+]
+
+[[package]]
+name = "testbench-scope"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "nusb",
 ]
 
 [[package]]

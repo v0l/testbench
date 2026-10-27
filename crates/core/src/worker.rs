@@ -51,7 +51,7 @@ pub struct Session<C, U> {
 }
 
 impl<C, U> Session<C, U> {
-    fn new(tx: Sender<C>, rx: Receiver<U>, handle: std::thread::JoinHandle<()>) -> Self {
+    pub fn from_parts(tx: Sender<C>, rx: Receiver<U>, handle: std::thread::JoinHandle<()>) -> Self {
         Self { tx, rx, handle: Some(handle) }
     }
 
@@ -73,7 +73,7 @@ pub fn spawn_supply(spec: String) -> SupplySession {
     let (tx, cmd_rx) = channel::<SupplyCommand>();
     let (up_tx, rx) = channel::<SupplyUpdate>();
     let handle = std::thread::spawn(move || supply_loop(spec, cmd_rx, up_tx));
-    Session::new(tx, rx, handle)
+    Session::from_parts(tx, rx, handle)
 }
 
 fn supply_loop(spec: String, cmds: Receiver<SupplyCommand>, out: Sender<SupplyUpdate>) {
@@ -175,7 +175,7 @@ pub fn spawn_load(spec: String) -> LoadSession {
     let (tx, cmd_rx) = channel::<LoadCommand>();
     let (up_tx, rx) = channel::<LoadUpdate>();
     let handle = std::thread::spawn(move || load_loop(spec, cmd_rx, up_tx));
-    Session::new(tx, rx, handle)
+    Session::from_parts(tx, rx, handle)
 }
 
 fn load_loop(spec: String, cmds: Receiver<LoadCommand>, out: Sender<LoadUpdate>) {
@@ -263,7 +263,7 @@ pub fn spawn_vna(target: VnaTarget) -> VnaSession {
     let (tx, cmd_rx) = channel::<VnaCommand>();
     let (up_tx, rx) = channel::<VnaUpdate>();
     let handle = std::thread::spawn(move || vna_loop(target, cmd_rx, up_tx));
-    Session::new(tx, rx, handle)
+    Session::from_parts(tx, rx, handle)
 }
 
 fn demo_standard(s: Standard) -> DemoStandard {

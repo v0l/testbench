@@ -1,0 +1,14 @@
+[package]
+name = "testbench-scope"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "USBTMC oscilloscope drivers, measurements and FFT"
+
+[lib]
+name = "testbench_scope"
+
+[dependencies]
+anyhow.workspace = true
+nusb.workspace = true
