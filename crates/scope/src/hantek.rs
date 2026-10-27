@@ -16,7 +16,8 @@ const CMD_SAMPLES: u8 = 0x02;
 const CMD_ACQUISITION: u8 = 0x12;
 const CMD_SCREENSHOT: u8 = 0x20;
 const REPLY: u8 = 0x80;
-const RETRIES: usize = 16;
+pub const READ_TIMEOUT: Duration = Duration::from_millis(1500);
+const RETRIES: usize = 6;
 const SETTLE: Duration = Duration::from_millis(100);
 const RETRY_WAIT: Duration = Duration::from_millis(25);
 
@@ -62,6 +63,13 @@ pub fn probe_from_index(i: u8) -> f64 {
         2 => 10.0,
         3 => 100.0,
         _ => 1000.0,
+    }
+}
+
+pub fn declared_len(body: &[u8]) -> usize {
+    match body {
+        [_, a, b, c, ..] => usize::from(*a) | usize::from(*b) << 8 | usize::from(*c) << 16,
+        _ => usize::MAX,
     }
 }
 
@@ -180,8 +188,15 @@ impl<P: Pipe> HantekScope<P> {
     }
 
     fn exchange(&mut self, cmd: u8, payload: &[u8]) -> Result<Vec<u8>> {
-        self.send(cmd, payload)?;
-        self.next(cmd)
+        let mut last = None;
+        for _ in 0..RETRIES {
+            self.send(cmd, payload)?;
+            match self.next(cmd) {
+                Ok(body) => return Ok(body),
+                Err(e) => last = Some(e),
+            }
+        }
+        Err(last.unwrap_or_else(|| anyhow::anyhow!("no reply")))
     }
 
     fn settings(&mut self) -> Result<Settings> {
@@ -194,10 +209,11 @@ impl<P: Pipe> HantekScope<P> {
             self.send(CMD_SAMPLES, &[1, channel as u8])?;
             let mut data = Vec::new();
             let mut got = false;
+            let mut expected = usize::MAX;
             loop {
-                let body = self.next(CMD_SAMPLES)?;
+                let Ok(body) = self.next(CMD_SAMPLES) else { break };
                 match body.first() {
-                    Some(0) => {}
+                    Some(0) => expected = declared_len(&body),
                     Some(1) => {
                         got = true;
                         data.extend_from_slice(body.get(2..).unwrap_or_default());
@@ -205,7 +221,7 @@ impl<P: Pipe> HantekScope<P> {
                     _ => break,
                 }
             }
-            if got {
+            if got && data.len() == expected {
                 return Ok(data);
             }
             std::thread::sleep(RETRY_WAIT);
@@ -300,6 +316,24 @@ mod tests {
         }
     }
 
+    struct Flaky {
+        inner: Fake,
+        drop_first: bool,
+    }
+
+    impl Pipe for Flaky {
+        fn write(&mut self, data: &[u8]) -> Result<()> {
+            self.inner.write(data)
+        }
+        fn read(&mut self) -> Result<Vec<u8>> {
+            if self.drop_first {
+                self.drop_first = false;
+                anyhow::bail!("timed out");
+            }
+            self.inner.read()
+        }
+    }
+
     fn settings_blob(vb: u8, pos: i16, tb: u8, on: u8) -> Vec<u8> {
         let mut b = vec![0u8; SETTINGS_LEN];
         b[0] = on;
@@ -388,7 +422,7 @@ mod tests {
         replies.push_back(reply(CMD_SETTINGS, &settings_blob(7, -8, 20, 1)));
         replies.push_back(reply(CMD_SETTINGS, &settings_blob(7, -8, 20, 1)));
         replies.push_back(reply(CMD_SAMPLES, &[3, 0]));
-        replies.push_back(reply(CMD_SAMPLES, &[0, 0, 0x80, 0x0c, 0]));
+        replies.push_back(reply(CMD_SAMPLES, &[0, 2, 0, 0]));
         replies.push_back(reply(CMD_SAMPLES, &[1, 0, 0xf9, 0xfa]));
         replies.push_back(reply(CMD_SAMPLES, &[2, 3]));
         let mut s = HantekScope::new(Fake { replies, sent: Vec::new() }).unwrap();
@@ -397,6 +431,21 @@ mod tests {
         assert_eq!(w.tdiv, 8e-3);
         assert!((w.dt - 8e-3 / 200.0).abs() < 1e-12);
         assert_eq!(w.vdiv, 2.0);
+    }
+
+    #[test]
+    fn declared_length_matches_the_captured_header() {
+        assert_eq!(declared_len(&[0, 0x80, 0x0c, 0]), 3200);
+    }
+
+    #[test]
+    fn a_dropped_reply_is_resent() {
+        let mut replies = VecDeque::new();
+        replies.push_back(reply(CMD_ECHO, b"tb"));
+        replies.push_back(reply(CMD_SETTINGS, &settings_blob(7, 0, 20, 1)));
+        let mut s = HantekScope::new(Flaky { inner: Fake { replies, sent: Vec::new() }, drop_first: true });
+        assert!(s.is_ok());
+        let _ = s.as_mut().unwrap().describe();
     }
 
     #[test]

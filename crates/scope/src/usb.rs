@@ -82,6 +82,7 @@ pub fn list_hantek() -> Result<Vec<UsbtmcInfo>> {
 
 pub struct NusbPipe {
     read_size: usize,
+    timeout: Duration,
     out: nusb::Endpoint<Bulk, Out>,
     inp: nusb::Endpoint<Bulk, In>,
     _interface: nusb::Interface,
@@ -89,7 +90,7 @@ pub struct NusbPipe {
 
 impl Pipe for NusbPipe {
     fn write(&mut self, data: &[u8]) -> Result<()> {
-        let done = self.out.transfer_blocking(Buffer::from(data), TIMEOUT);
+        let done = self.out.transfer_blocking(Buffer::from(data), self.timeout);
         done.status.map_err(|e| anyhow!("USB write failed: {e}"))?;
         Ok(())
     }
@@ -97,7 +98,7 @@ impl Pipe for NusbPipe {
     fn read(&mut self) -> Result<Vec<u8>> {
         let packet = self.inp.max_packet_size();
         let want = self.read_size.div_ceil(packet) * packet;
-        let done = self.inp.transfer_blocking(self.inp.allocate(want), TIMEOUT);
+        let done = self.inp.transfer_blocking(self.inp.allocate(want), self.timeout);
         done.status.map_err(|e| anyhow!("USB read failed: {e}"))?;
         let n = done.actual_len.min(done.buffer.len());
         Ok(done.buffer[..n].to_vec())
@@ -105,10 +106,10 @@ impl Pipe for NusbPipe {
 }
 
 pub fn open_usb(info: &UsbtmcInfo) -> Result<UsbTmc<NusbPipe>> {
-    Ok(UsbTmc::new(open_pipe(info, IN_TRANSFER)?))
+    Ok(UsbTmc::new(open_pipe(info, IN_TRANSFER, TIMEOUT)?))
 }
 
-pub fn open_pipe(info: &UsbtmcInfo, read_size: usize) -> Result<NusbPipe> {
+pub fn open_pipe(info: &UsbtmcInfo, read_size: usize, timeout: Duration) -> Result<NusbPipe> {
     let device = info.device.open().wait().context("opening the USB device")?;
     let interface = device
         .detach_and_claim_interface(info.interface)
@@ -131,7 +132,7 @@ pub fn open_pipe(info: &UsbtmcInfo, read_size: usize) -> Result<NusbPipe> {
     };
     let out = interface.endpoint::<Bulk, Out>(o)?;
     let inp = interface.endpoint::<Bulk, In>(i)?;
-    Ok(NusbPipe { read_size, out, inp, _interface: interface })
+    Ok(NusbPipe { read_size, timeout, out, inp, _interface: interface })
 }
 
 #[cfg(test)]
