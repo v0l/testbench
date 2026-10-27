@@ -12,3 +12,4 @@ name = "testbench_scope"
 [dependencies]
 anyhow.workspace = true
 nusb.workspace = true
+png = "0.18"

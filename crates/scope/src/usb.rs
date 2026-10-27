@@ -53,7 +53,35 @@ pub fn list_usbtmc() -> Result<Vec<UsbtmcInfo>> {
     Ok(out)
 }
 
+pub const HANTEK_VENDOR: u16 = 0x049f;
+pub const HANTEK_5000_PRODUCT: u16 = 0x505a;
+
+pub fn is_hantek(vendor: u16, product: u16) -> bool {
+    vendor == HANTEK_VENDOR && product == HANTEK_5000_PRODUCT
+}
+
+pub fn list_hantek() -> Result<Vec<UsbtmcInfo>> {
+    let mut out = Vec::new();
+    for d in nusb::list_devices().wait()? {
+        if !is_hantek(d.vendor_id(), d.product_id()) {
+            continue;
+        }
+        let Some(i) = d.interfaces().next() else { continue };
+        out.push(UsbtmcInfo {
+            vendor_id: d.vendor_id(),
+            product_id: d.product_id(),
+            manufacturer: "Hantek".into(),
+            product: "DSO5000P".into(),
+            serial: d.serial_number().unwrap_or_default().to_string(),
+            interface: i.interface_number(),
+            device: d.clone(),
+        });
+    }
+    Ok(out)
+}
+
 pub struct NusbPipe {
+    read_size: usize,
     out: nusb::Endpoint<Bulk, Out>,
     inp: nusb::Endpoint<Bulk, In>,
     _interface: nusb::Interface,
@@ -68,7 +96,7 @@ impl Pipe for NusbPipe {
 
     fn read(&mut self) -> Result<Vec<u8>> {
         let packet = self.inp.max_packet_size();
-        let want = IN_TRANSFER.div_ceil(packet) * packet;
+        let want = self.read_size.div_ceil(packet) * packet;
         let done = self.inp.transfer_blocking(self.inp.allocate(want), TIMEOUT);
         done.status.map_err(|e| anyhow!("USB read failed: {e}"))?;
         let n = done.actual_len.min(done.buffer.len());
@@ -77,6 +105,10 @@ impl Pipe for NusbPipe {
 }
 
 pub fn open_usb(info: &UsbtmcInfo) -> Result<UsbTmc<NusbPipe>> {
+    Ok(UsbTmc::new(open_pipe(info, IN_TRANSFER)?))
+}
+
+pub fn open_pipe(info: &UsbtmcInfo, read_size: usize) -> Result<NusbPipe> {
     let device = info.device.open().wait().context("opening the USB device")?;
     let interface = device
         .detach_and_claim_interface(info.interface)
@@ -99,7 +131,7 @@ pub fn open_usb(info: &UsbtmcInfo) -> Result<UsbTmc<NusbPipe>> {
     };
     let out = interface.endpoint::<Bulk, Out>(o)?;
     let inp = interface.endpoint::<Bulk, In>(i)?;
-    Ok(UsbTmc::new(NusbPipe { out, inp, _interface: interface }))
+    Ok(NusbPipe { read_size, out, inp, _interface: interface })
 }
 
 #[cfg(test)]
@@ -111,5 +143,11 @@ mod tests {
         assert!(is_usbtmc(0xFE, 3));
         assert!(!is_usbtmc(0xFE, 1));
         assert!(!is_usbtmc(0x08, 3));
+    }
+
+    #[test]
+    fn hantek_id_match() {
+        assert!(is_hantek(0x049f, 0x505a));
+        assert!(!is_hantek(0x049f, 0x0001));
     }
 }

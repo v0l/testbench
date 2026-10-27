@@ -3,7 +3,7 @@ use anyhow::Result;
 use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender, channel};
 use std::time::Duration;
 use testbench_scope::{
-    DemoScope, Scope, Slope, Trigger, UsbtmcInfo, Waveform, connect_usb, list_usbtmc,
+    DemoScope, Scope, Slope, Trigger, UsbtmcInfo, Waveform, connect_usb, list_hantek, list_usbtmc,
 };
 
 #[derive(Clone, Debug)]
@@ -28,6 +28,7 @@ pub fn scope_targets(demo: bool) -> Vec<ScopeTarget> {
     list_usbtmc()
         .unwrap_or_default()
         .into_iter()
+        .chain(list_hantek().unwrap_or_default())
         .map(|i| ScopeTarget::Usb(Box::new(i)))
         .collect()
 }

@@ -113,6 +113,10 @@ pub fn connect(mut link: Box<dyn Link>) -> Result<Box<dyn Scope>> {
 }
 
 pub fn connect_usb(info: &crate::usb::UsbtmcInfo) -> Result<Box<dyn Scope>> {
+    if crate::usb::is_hantek(info.vendor_id, info.product_id) {
+        let pipe = crate::usb::open_pipe(info, 4096)?;
+        return Ok(Box::new(crate::hantek::HantekScope::new(pipe)?));
+    }
     connect(Box::new(crate::usb::open_usb(info)?))
 }
 
