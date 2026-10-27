@@ -112,6 +112,7 @@ impl LoadPanel {
                 });
             });
         egui::CentralPanel::no_frame().show(ui, |ui| {
+            crate::widgets::chassis(ui);
             egui::Frame::NONE.inner_margin(egui::Margin::same(10)).show(ui, |ui| {
                 ui.spacing_mut().item_spacing.y = 8.0;
                 self.live_card(ui);

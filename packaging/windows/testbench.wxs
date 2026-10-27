@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Package
+      Name="Testbench"
+      Manufacturer="v0l"
+      Version="$(var.Version)"
+      UpgradeCode="77260aa6-6053-4e79-9e82-619d743876ea"
+      Scope="perMachine"
+      Compressed="yes">
+
+    <MajorUpgrade DowngradeErrorMessage="A newer version of Testbench is already installed." />
+    <MediaTemplate EmbedCab="yes" />
+
+    <Icon Id="AppIcon" SourceFile="packaging\windows\icon.ico" />
+    <Property Id="ARPPRODUCTICON" Value="AppIcon" />
+
+    <Property Id="ARPURLINFOABOUT" Value="https://github.com/v0l/testbench" />
+
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="Testbench">
+        <Component Id="TestbenchCli" Guid="5ebd3d4c-3699-4a3e-b681-28902e777751">
+          <File Id="TestbenchExe" Source="$(var.BinDir)\testbench.exe" KeyPath="yes" />
+          <Environment Id="TestbenchPath" Name="PATH" Value="[INSTALLFOLDER]" Action="set" Part="last" System="yes" Permanent="no" />
+        </Component>
+        <Component Id="TestbenchUi" Guid="a6f732de-e699-458c-b74a-56897a3de23d">
+          <File Id="TestbenchUiExe" Source="$(var.BinDir)\testbench-ui.exe" KeyPath="yes" />
+        </Component>
+        <Component Id="TestbenchDocs" Guid="6056f249-90c9-4330-940e-ea98c6c097d0">
+          <File Id="ReadmeMd" Source="README.md" KeyPath="yes" />
+          <File Id="LicenseTxt" Source="LICENSE" Name="LICENSE.txt" />
+        </Component>
+      </Directory>
+    </StandardDirectory>
+
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Component Id="TestbenchShortcut" Guid="8545d9fc-2bf0-4e69-b0ea-2473d34d44a9">
+        <Shortcut Id="TestbenchUiShortcut" Icon="AppIcon" Name="Testbench" Target="[#TestbenchUiExe]" WorkingDirectory="INSTALLFOLDER" />
+        <RegistryValue Root="HKLM" Key="Software\v0l\Testbench" Name="shortcut" Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+    </StandardDirectory>
+
+    <Feature Id="Main" Title="Testbench" Level="1">
+      <ComponentRef Id="TestbenchCli" />
+      <ComponentRef Id="TestbenchUi" />
+      <ComponentRef Id="TestbenchDocs" />
+      <ComponentRef Id="TestbenchShortcut" />
+    </Feature>
+  </Package>
+</Wix>

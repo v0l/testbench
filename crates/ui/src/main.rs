@@ -80,15 +80,22 @@ fn stop_hardware_on_signal() {
 }
 
 impl App {
-    fn new(demo: bool) -> Self {
+    fn new(demo: bool, tab: Tab) -> Self {
         Self {
-            tab: Tab::Supply,
+            tab,
             started: Instant::now(),
             supply: SupplyPanel::new(demo),
             load: LoadPanel::new(demo),
             vna: VnaPanel::new(demo),
             log: LogPanel::new(),
         }
+    }
+
+    fn autoconnect(&mut self) {
+        self.supply.connect();
+        self.load.connect();
+        self.vna.connect();
+        self.vna.sweep_once();
     }
 
     fn now(&self) -> f64 {
@@ -182,7 +189,19 @@ impl eframe::App for App {
 }
 
 fn main() -> eframe::Result<()> {
-    let demo = std::env::args().any(|a| a == "--demo");
+    let args: Vec<String> = std::env::args().collect();
+    let demo = args.iter().any(|a| a == "--demo");
+    let tab = args
+        .iter()
+        .position(|a| a == "--tab")
+        .and_then(|i| args.get(i + 1))
+        .map(|t| match t.as_str() {
+            "load" => Tab::Load,
+            "vna" => Tab::Vna,
+            "log" => Tab::Log,
+            _ => Tab::Supply,
+        })
+        .unwrap_or(Tab::Supply);
     stop_hardware_on_signal();
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
@@ -199,7 +218,11 @@ fn main() -> eframe::Result<()> {
         options,
         Box::new(move |cc| {
             egui_bench::install(&cc.egui_ctx);
-            Ok(Box::new(App::new(demo)))
+            let mut app = App::new(demo, tab);
+            if demo {
+                app.autoconnect();
+            }
+            Ok(Box::new(app))
         }),
     )
 }

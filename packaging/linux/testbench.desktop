@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Testbench
+GenericName=Test and Measure Bench
+Comment=Drive a bench supply, an electronic load and a NanoVNA from one window
+Exec=testbench-ui
+Icon=testbench
+Terminal=false
+Categories=Utility;Science;Electronics;
+Keywords=psu;load;nanovna;vna;measure;

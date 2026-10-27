@@ -166,6 +166,7 @@ impl VnaPanel {
                 });
             });
         egui::CentralPanel::no_frame().show(ui, |ui| {
+            crate::widgets::chassis(ui);
             egui::Frame::NONE.inner_margin(egui::Margin::same(10)).show(ui, |ui| {
                 ui.spacing_mut().item_spacing.y = 8.0;
                 self.marker_card(ui);
@@ -251,21 +252,16 @@ impl VnaPanel {
         let connected = self.connected();
         section(ui, "calibration", "short, open, load", |ui| {
             ui.add_enabled_ui(connected, |ui| {
-                hint(ui, "Connect each standard to the port, then capture it over the sweep range above.");
+                hint(ui, "Connect each standard to the port, then capture it over the sweep range above. Green keys are captured.");
                 ui.horizontal(|ui| {
                     for (i, std) in Standard::ALL.iter().enumerate() {
-                        let key = Key::new(format!("capture {}", std.label()))
+                        let key = Key::new(std.label())
                             .outline(if self.cal[i] { OK } else { READOUT });
                         if ui.add(key).clicked() {
                             let p = self.params();
                             self.send(VnaCommand::Params(p));
                             self.send(VnaCommand::Capture(*std));
                         }
-                    }
-                });
-                ui.horizontal(|ui| {
-                    for (i, std) in Standard::ALL.iter().enumerate() {
-                        lamp(ui, std.label(), self.cal[i], false);
                     }
                 });
                 if switch(ui, "apply", &mut self.use_cal, "use calibration", "Corrects sweeps taken over the same range.") {
@@ -330,7 +326,7 @@ impl VnaPanel {
         let marker_f = self.marker.and_then(|i| self.sweep.get(i)).map(|p| p.freq);
         let freqs: Vec<f64> = self.sweep.iter().map(|p| p.freq).collect();
         let w = ui.available_width();
-        let h = ((ui.available_height() - 24.0) / 2.0).clamp(120.0, 260.0);
+        let h = ((ui.available_height() - 70.0) / 2.0).clamp(90.0, 260.0);
         let mut picked = None;
         ui.horizontal_top(|ui| {
             let left = (w - 8.0 - h * 2.0 - 8.0).max(300.0);

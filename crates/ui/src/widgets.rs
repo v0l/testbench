@@ -90,3 +90,12 @@ pub fn backend_choice(ui: &mut Ui, id: &str, c: &mut crate::devices::Choice) -> 
     }
     changed
 }
+
+pub fn chassis(ui: &Ui) {
+    let r = ui.max_rect();
+    ui.painter().rect_filled(r, 0.0, egui_bench::prelude::CHASSIS);
+    ui.painter().line_segment(
+        [r.left_top(), r.right_top()],
+        egui::Stroke::new(1.0, egui_bench::prelude::ETCH),
+    );
+}
