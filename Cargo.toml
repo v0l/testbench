@@ -13,8 +13,8 @@ description = "Test and measure bench: a PSU, an electronic load and a NanoVNA f
 nusb = "0.2"
 testbench-core = { path = "crates/core" }
 testbench-scope = { path = "crates/scope" }
-cycler-core = { git = "https://github.com/v0l/cycler" }
-antenna-vna = { git = "https://github.com/v0l/antenna-toolbox" }
+cycler-core = { git = "https://github.com/v0l/cycler", rev = "4fb04a2db36ea366a569ea57beca47ed84217e27" }
+antenna-vna = { git = "https://github.com/v0l/antenna-toolbox", rev = "5b55cd493027bb80bd0fe4d37c589672de9eeebe" }
 anyhow = "1.0"
 chrono = "0.4"
 clap = { version = "4.6", features = ["derive"] }
