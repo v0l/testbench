@@ -6,6 +6,11 @@ All notable changes to Testbench are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-10-30
+
+### Fixed
+- The window no longer freezes ("not responding") when it sits on another workspace: vsync is off, so a hidden window is never blocked waiting for a frame.
+
 ## [0.1.0] - 2026-10-30
 
 ### Added

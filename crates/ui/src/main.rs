@@ -224,6 +224,10 @@ fn main() -> eframe::Result<()> {
                 eframe::icon_data::from_png_bytes(include_bytes!("../assets/icon-256.png"))
                     .unwrap_or_default(),
             ),
+        glow_options: eframe::egui_glow::GlowConfiguration {
+            vsync: false,
+            ..Default::default()
+        },
         ..Default::default()
     };
     eframe::run_native(
