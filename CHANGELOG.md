@@ -6,6 +6,11 @@ All notable changes to Testbench are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.1.4] - 2026-10-31
+
+### Changed
+- vsync is on again. The hang on a hidden workspace is fixed in egui 0.37, so the workaround is gone.
+
 ## [0.1.3] - 2026-10-31
 
 ### Fixed
