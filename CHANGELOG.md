@@ -6,6 +6,11 @@ All notable changes to Testbench are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-10-31
+
+### Fixed
+- Choice boxes and text fields have accessible names, for screen readers and UI tests.
+
 ## [0.1.2] - 2026-10-30
 
 ### Changed
