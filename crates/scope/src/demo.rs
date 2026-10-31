@@ -35,7 +35,7 @@ impl DemoScope {
     pub fn new() -> Self {
         Self {
             desc: Description {
-                manufacturer: "usbscope".into(),
+                manufacturer: "testbench".into(),
                 model: "DEMO4".into(),
                 serial: "0001".into(),
                 firmware: "1.0".into(),
