@@ -2,6 +2,7 @@ mod devices;
 mod logtab;
 mod load;
 mod plot;
+mod render_check;
 mod scope;
 mod smith;
 mod supply;
@@ -201,6 +202,9 @@ impl eframe::App for App {
 
 fn main() -> eframe::Result<()> {
     let args: Vec<String> = std::env::args().collect();
+    if args.iter().any(|a| a == "--render-check") {
+        std::process::exit(if render_check::report() { 0 } else { 1 });
+    }
     let demo = args.iter().any(|a| a == "--demo");
     let connect_scope = args.iter().any(|a| a == "--connect-scope");
     let tab = args
@@ -216,7 +220,13 @@ fn main() -> eframe::Result<()> {
         })
         .unwrap_or(Tab::Supply);
     stop_hardware_on_signal();
+    let mut wgpu_options = eframe::egui_wgpu::WgpuConfiguration::default();
+    if let eframe::egui_wgpu::WgpuSetup::CreateNew(setup) = &mut wgpu_options.wgpu_setup {
+        setup.instance_descriptor.backends = render_check::pick_backends();
+    }
     let options = eframe::NativeOptions {
+        renderer: eframe::Renderer::Wgpu,
+        wgpu_options,
         viewport: egui::ViewportBuilder::default()
             .with_inner_size([1100.0, 700.0])
             .with_min_inner_size([980.0, 620.0])
