@@ -6,6 +6,14 @@ All notable changes to Testbench are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.1.5] - 2026-11-25
+
+### Fixed
+- The window opens with the wgpu renderer and checks at startup that it draws, so it no longer opens blank on machines where the OpenGL renderer fails.
+
+### Changed
+- Every release now includes a source archive with its checksum.
+
 ## [0.1.4] - 2026-10-31
 
 ### Changed

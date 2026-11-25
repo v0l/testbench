@@ -3700,7 +3700,7 @@ dependencies = [
 
 [[package]]
 name = "testbench-cli"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "anyhow",
  "clap",
@@ -3709,7 +3709,7 @@ dependencies = [
 
 [[package]]
 name = "testbench-core"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "antenna-vna",
  "anyhow",
@@ -3720,7 +3720,7 @@ dependencies = [
 
 [[package]]
 name = "testbench-scope"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "anyhow",
  "nusb",
@@ -3729,7 +3729,7 @@ dependencies = [
 
 [[package]]
 name = "testbench-ui"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "anyhow",
  "chrono",
